@@ -1,0 +1,122 @@
+[workspace]
+members = [
+    "runtime",
+    "pallets/job-registry",
+    "pallets/job-verifier",
+    "pallets/consensus-manager",
+    "pallets/event-hub",
+    "pallets/telemetry",
+]
+resolver = "2"
+
+[workspace.package]
+authors = ["PolkaComputeLab Team"]
+edition = "2021"
+repository = "https://github.com/polkacomputelab/polkacomputelab"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+# Substrate - Latest versions
+codec = { package = "parity-scale-codec", version = "*", default-features = false, features = ["derive"] }
+scale-info = { version = "*", default-features = false, features = ["derive"] }
+log = { version = "*", default-features = false }
+serde = { version = "*", default-features = false, features = ["derive", "alloc"] }
+
+# Substrate primitives
+sp-api = { version = "*", default-features = false }
+sp-block-builder = { version = "*", default-features = false }
+sp-consensus-aura = { version = "*", default-features = false }
+sp-core = { version = "*", default-features = false }
+sp-inherents = { version = "*", default-features = false }
+sp-io = { version = "*", default-features = false }
+sp-offchain = { version = "*", default-features = false }
+sp-runtime = { version = "*", default-features = false }
+sp-session = { version = "*", default-features = false }
+sp-std = { version = "*", default-features = false }
+sp-transaction-pool = { version = "*", default-features = false }
+sp-version = { version = "*", default-features = false }
+sp-genesis-builder = { version = "*", default-features = false }
+
+# Frame dependencies
+frame-benchmarking = { version = "*", default-features = false }
+frame-executive = { version = "*", default-features = false }
+frame-support = { version = "*", default-features = false }
+frame-system = { version = "*", default-features = false }
+frame-system-benchmarking = { version = "*", default-features = false }
+frame-system-rpc-runtime-api = { version = "*", default-features = false }
+frame-try-runtime = { version = "*", default-features = false }
+
+# Frame pallets
+pallet-aura = { version = "*", default-features = false }
+pallet-balances = { version = "*", default-features = false }
+pallet-session = { version = "*", default-features = false }
+pallet-sudo = { version = "*", default-features = false }
+pallet-timestamp = { version = "*", default-features = false }
+pallet-transaction-payment = { version = "*", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { version = "*", default-features = false }
+
+# Cumulus
+cumulus-pallet-aura-ext = { version = "*", default-features = false }
+cumulus-pallet-parachain-system = { version = "*", default-features = false }
+cumulus-pallet-session-benchmarking = { version = "*", default-features = false }
+cumulus-pallet-xcm = { version = "*", default-features = false }
+cumulus-pallet-xcmp-queue = { version = "*", default-features = false }
+cumulus-primitives-core = { version = "*", default-features = false }
+cumulus-primitives-utility = { version = "*", default-features = false }
+parachain-info = { package = "staging-parachain-info", version = "*", default-features = false }
+
+# Polkadot
+pallet-xcm = { version = "*", default-features = false }
+polkadot-parachain-primitives = { version = "*", default-features = false }
+polkadot-runtime-common = { version = "*", default-features = false }
+xcm = { package = "staging-xcm", version = "*", default-features = false }
+xcm-builder = { package = "staging-xcm-builder", version = "*", default-features = false }
+xcm-executor = { package = "staging-xcm-executor", version = "*", default-features = false }
+
+# Node dependencies
+clap = { version = "*", features = ["derive"] }
+futures = { version = "*" }
+jsonrpsee = { version = "*", features = ["server"] }
+serde_json = { version = "*", default-features = false }
+
+# Node client
+sc-basic-authorship = { version = "*" }
+sc-chain-spec = { version = "*" }
+sc-cli = { version = "*" }
+sc-client-api = { version = "*" }
+sc-consensus = { version = "*" }
+sc-executor = { version = "*" }
+sc-network = { version = "*" }
+sc-offchain = { version = "*" }
+sc-rpc = { version = "*" }
+sc-service = { version = "*" }
+sc-telemetry = { version = "*" }
+sc-transaction-pool = { version = "*" }
+sc-transaction-pool-api = { version = "*" }
+
+# Node consensus
+sc-consensus-aura = { version = "*" }
+sp-consensus = { version = "*" }
+sp-keystore = { version = "*" }
+sp-timestamp = { version = "*" }
+
+# Cumulus node
+cumulus-client-cli = { version = "*" }
+cumulus-client-collator = { version = "*" }
+cumulus-client-consensus-aura = { version = "*" }
+cumulus-client-consensus-common = { version = "*" }
+cumulus-client-consensus-proposer = { version = "*" }
+cumulus-client-service = { version = "*" }
+cumulus-primitives-parachain-inherent = { version = "*" }
+cumulus-relay-chain-interface = { version = "*" }
+
+# Polkadot node
+polkadot-cli = { version = "*" }
+polkadot-primitives = { version = "*" }
+
+# RPC
+substrate-frame-rpc-system = { version = "*" }
+pallet-transaction-payment-rpc = { version = "*" }
+
+[profile.release]
+panic = "unwind"

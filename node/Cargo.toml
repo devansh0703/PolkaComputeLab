@@ -1,0 +1,89 @@
+[package]
+name = "polkacomputelab-node"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
+log = { workspace = true }
+codec = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+jsonrpsee = { workspace = true, features = ["server"] }
+futures = { workspace = true }
+serde_json = { workspace = true }
+
+# Local
+polkacomputelab-runtime = { path = "../runtime" }
+
+# Substrate
+frame-benchmarking = { workspace = true }
+frame-benchmarking-cli = { version = "34.0.0" }
+pallet-transaction-payment-rpc = { workspace = true }
+sc-basic-authorship = { workspace = true }
+sc-chain-spec = { workspace = true }
+sc-cli = { workspace = true }
+sc-client-api = { workspace = true }
+sc-offchain = { workspace = true }
+sc-consensus = { workspace = true }
+sc-executor = { workspace = true }
+sc-network = { workspace = true }
+sc-network-sync = { version = "0.35.0" }
+sc-rpc = { workspace = true }
+sc-service = { workspace = true }
+sc-sysinfo = { version = "29.0.0" }
+sc-telemetry = { workspace = true }
+sc-tracing = { version = "30.0.0" }
+sc-transaction-pool = { workspace = true }
+sc-transaction-pool-api = { workspace = true }
+sc-consensus-aura = { workspace = true }
+sp-api = { workspace = true }
+sp-block-builder = { workspace = true }
+sp-blockchain = { version = "30.0.0" }
+sp-consensus-aura = { workspace = true }
+sp-consensus = { workspace = true }
+sp-core = { workspace = true }
+sp-keystore = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-timestamp = { workspace = true }
+substrate-frame-rpc-system = { workspace = true }
+substrate-prometheus-endpoint = { version = "0.17.0" }
+
+# Polkadot
+polkadot-cli = { workspace = true }
+polkadot-primitives = { workspace = true }
+xcm = { workspace = true }
+
+# Cumulus
+cumulus-client-cli = { workspace = true }
+cumulus-client-collator = { workspace = true }
+cumulus-client-consensus-aura = { workspace = true }
+cumulus-client-consensus-common = { workspace = true }
+cumulus-client-consensus-proposer = { workspace = true }
+cumulus-client-service = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+cumulus-primitives-parachain-inherent = { workspace = true }
+cumulus-relay-chain-interface = { workspace = true }
+color-print = "0.3.4"
+
+[build-dependencies]
+substrate-build-script-utils = { version = "11.0.0" }
+
+[features]
+default = []
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-benchmarking-cli/runtime-benchmarks",
+    "polkacomputelab-runtime/runtime-benchmarks",
+    "polkadot-cli/runtime-benchmarks",
+    "sc-service/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
+try-runtime = [
+    "polkacomputelab-runtime/try-runtime",
+    "polkadot-cli/try-runtime",
+    "sp-runtime/try-runtime",
+]
