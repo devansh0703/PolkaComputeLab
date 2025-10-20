@@ -34,6 +34,7 @@ pub mod pallet {
 
     /// Proof type enumeration
     #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+    #[codec(dumb_trait_bound)]
     pub enum ProofType {
         /// Simple signature-based proof
         Signature,
@@ -41,6 +42,18 @@ pub mod pallet {
         MerkleRoot,
         /// Hash-based proof
         Hash,
+    }
+
+    impl ProofType {
+        /// Convert from u8 representation
+        pub fn from_u8(value: u8) -> Result<Self, ()> {
+            match value {
+                0 => Ok(ProofType::Signature),
+                1 => Ok(ProofType::MerkleRoot),
+                2 => Ok(ProofType::Hash),
+                _ => Err(()),
+            }
+        }
     }
 
     /// Job result structure
@@ -134,6 +147,8 @@ pub mod pallet {
         NotAuthorized,
         /// Result hash mismatch
         ResultHashMismatch,
+        /// Invalid proof type
+        InvalidProofType,
     }
 
     #[pallet::call]
@@ -144,7 +159,7 @@ pub mod pallet {
         /// - `origin`: The off-chain worker or authorized account
         /// - `job_id`: The job ID
         /// - `result_hash`: Hash of the computation result
-        /// - `proof_type`: Type of proof being submitted
+        /// - `proof_type_u8`: Type of proof being submitted (0=Signature, 1=MerkleRoot, 2=Hash)
         /// - `proof_data`: The proof data (signature, merkle proof, etc.)
         #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::submit_proof())]
@@ -152,10 +167,14 @@ pub mod pallet {
             origin: OriginFor<T>,
             job_id: u64,
             result_hash: H256,
-            proof_type: ProofType,
+            proof_type_u8: u8,
             proof_data: Vec<u8>,
         ) -> DispatchResult {
             let _who = ensure_signed(origin)?;
+
+            // Convert u8 to ProofType
+            let proof_type = ProofType::from_u8(proof_type_u8)
+                .map_err(|_| Error::<T>::InvalidProofType)?;
 
             // Check job exists
             let job = JobRegistry::<T>::jobs(job_id)
@@ -244,11 +263,11 @@ pub mod pallet {
                 result.verified = true;
                 JobResults::<T>::insert(job_id, result);
 
-                // Update job status to Verified
+                // Update job status to Verified (3 = Verified)
                 let _ = JobRegistry::<T>::update_job_status(
                     frame_system::RawOrigin::Signed(job.owner.clone()).into(),
                     job_id,
-                    JobStatus::Verified,
+                    3,
                 );
 
                 // Update statistics
@@ -293,7 +312,7 @@ pub mod pallet {
                 let _ = JobRegistry::<T>::update_job_status(
                     frame_system::RawOrigin::Signed(job.owner.clone()).into(),
                     job_id,
-                    JobStatus::Verified,
+                    3, // 3 = Verified
                 );
 
                 // Update statistics

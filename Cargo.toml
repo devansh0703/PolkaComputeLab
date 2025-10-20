@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "runtime",
+    "node",
     "pallets/job-registry",
     "pallets/job-verifier",
     "pallets/consensus-manager",

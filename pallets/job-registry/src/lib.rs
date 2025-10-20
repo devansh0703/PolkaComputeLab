@@ -31,6 +31,7 @@ pub mod pallet {
 
     /// Job status enumeration
     #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+    #[codec(dumb_trait_bound)]
     pub enum JobStatus {
         Pending,
         InProgress,
@@ -42,6 +43,20 @@ pub mod pallet {
     impl Default for JobStatus {
         fn default() -> Self {
             JobStatus::Pending
+        }
+    }
+
+    impl JobStatus {
+        /// Convert from u8 representation
+        pub fn from_u8(value: u8) -> Result<Self, ()> {
+            match value {
+                0 => Ok(JobStatus::Pending),
+                1 => Ok(JobStatus::InProgress),
+                2 => Ok(JobStatus::Completed),
+                3 => Ok(JobStatus::Verified),
+                4 => Ok(JobStatus::Failed),
+                _ => Err(()),
+            }
         }
     }
 
@@ -124,8 +139,8 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// A new job was submitted [job_id, owner]
         JobSubmitted { job_id: u64, owner: T::AccountId },
-        /// Job status was updated [job_id, old_status, new_status]
-        JobStatusUpdated { job_id: u64, old_status: JobStatus, new_status: JobStatus },
+        /// Job status was updated [job_id]
+        JobStatusUpdated { job_id: u64 },
         /// Job was completed [job_id, block_number]
         JobCompleted { job_id: u64, block_number: BlockNumberFor<T> },
         /// Job failed [job_id, reason]
@@ -140,6 +155,8 @@ pub mod pallet {
         JobNotFound,
         /// Not authorized to modify this job
         NotAuthorized,
+        /// Invalid job status value
+        InvalidJobStatus,
         /// Invalid job status transition
         InvalidStatusTransition,
         /// Circular dependency detected
@@ -244,15 +261,19 @@ pub mod pallet {
         /// # Parameters
         /// - `origin`: The account updating the job (must be owner or sudo)
         /// - `job_id`: The job to update
-        /// - `new_status`: The new status
+        /// - `new_status_u8`: The new status (0=Pending, 1=InProgress, 2=Completed, 3=Verified, 4=Failed)
         #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::update_job_status())]
         pub fn update_job_status(
             origin: OriginFor<T>,
             job_id: u64,
-            new_status: JobStatus,
+            new_status_u8: u8,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+
+            // Convert u8 to JobStatus
+            let new_status = JobStatus::from_u8(new_status_u8)
+                .map_err(|_| Error::<T>::InvalidJobStatus)?;
 
             Jobs::<T>::try_mutate(job_id, |maybe_job| -> DispatchResult {
                 let job = maybe_job.as_mut().ok_or(Error::<T>::JobNotFound)?;
@@ -277,8 +298,6 @@ pub mod pallet {
 
                 Self::deposit_event(Event::JobStatusUpdated {
                     job_id,
-                    old_status,
-                    new_status: new_status.clone(),
                 });
 
                 if matches!(new_status, JobStatus::Completed) {

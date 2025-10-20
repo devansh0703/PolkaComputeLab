@@ -28,6 +28,7 @@ pub mod pallet {
 
     /// Consensus algorithm types
     #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+    #[codec(dumb_trait_bound)]
     pub enum ConsensusType {
         /// Aura consensus
         Aura,
@@ -40,6 +41,18 @@ pub mod pallet {
     impl Default for ConsensusType {
         fn default() -> Self {
             ConsensusType::Aura
+        }
+    }
+
+    impl ConsensusType {
+        /// Convert from u8 representation
+        pub fn from_u8(value: u8) -> Result<Self, ()> {
+            match value {
+                0 => Ok(ConsensusType::Aura),
+                1 => Ok(ConsensusType::Babe),
+                2 => Ok(ConsensusType::Custom),
+                _ => Err(()),
+            }
         }
     }
 
@@ -75,7 +88,7 @@ pub mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         
         /// Weight information for extrinsics in this pallet.
-        type WeightInfo: WeightInfo;
+        type WeightInfo: crate::weights::WeightInfo;
 
         /// Maximum number of validator metrics to store
         #[pallet::constant]
@@ -135,11 +148,9 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Consensus type changed [block_number, old_type, new_type]
+        /// Consensus type changed [block_number]
         ConsensusChanged {
             block_number: u32,
-            old_type: ConsensusType,
-            new_type: ConsensusType,
         },
         /// Block metrics recorded [block_number]
         BlockMetricsRecorded { block_number: u32 },
@@ -193,16 +204,19 @@ pub mod pallet {
         ///
         /// # Parameters
         /// - `origin`: Root origin (sudo)
-        /// - `consensus_type`: The new consensus type
+        /// - `consensus_type_u8`: The new consensus type (0=Aura, 1=Babe, 2=Custom)
         #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::set_consensus())]
         pub fn set_consensus(
             origin: OriginFor<T>,
-            consensus_type: ConsensusType,
+            consensus_type_u8: u8,
         ) -> DispatchResult {
             ensure_root(origin)?;
 
-            let old_type = CurrentConsensus::<T>::get();
+            // Convert u8 to ConsensusType
+            let consensus_type = ConsensusType::from_u8(consensus_type_u8)
+                .map_err(|_| Error::<T>::InvalidConsensusType)?;
+
             let block_number: u32 = frame_system::Pallet::<T>::block_number().saturated_into();
 
             // Update consensus type
@@ -215,8 +229,6 @@ pub mod pallet {
 
             Self::deposit_event(Event::ConsensusChanged {
                 block_number,
-                old_type,
-                new_type: consensus_type,
             });
 
             Ok(())

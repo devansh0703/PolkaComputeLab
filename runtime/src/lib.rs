@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
@@ -5,11 +7,12 @@ use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
-    create_runtime_str, generic, impl_opaque_keys,
+    generic, impl_opaque_keys,
     traits::{AccountIdLookup, BlakeTwo256, Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
+use sp_std::borrow::Cow;
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -27,7 +30,7 @@ pub use frame_support::{
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
-use pallet_transaction_payment::{ConstFeeMultiplier, Multiplier};
+// Removed unused imports
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
@@ -58,14 +61,14 @@ pub mod opaque {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("polkacomputelab"),
-    impl_name: create_runtime_str!("polkacomputelab"),
+    spec_name: Cow::Borrowed("polkacomputelab"),
+    impl_name: Cow::Borrowed("polkacomputelab"),
     authoring_version: 1,
     spec_version: 1,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
-    state_version: 1,
+    system_version: 1,
 };
 
 /// This determines the average expected block time that we are targeting.
@@ -145,6 +148,8 @@ impl frame_system::Config for Runtime {
     type Lookup = AccountIdLookup<AccountId, ()>;
     type Block = Block;
     type RuntimeEvent = RuntimeEvent;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeTask = RuntimeTask;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
     type Version = Version;
@@ -156,6 +161,12 @@ impl frame_system::Config for Runtime {
     type SS58Prefix = SS58Prefix;
     type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
     type MaxConsumers = frame_support::traits::ConstU32<16>;
+    type ExtensionsWeightInfo = ();
+    type SingleBlockMigrations = ();
+    type MultiBlockMigrator = ();
+    type PreInherents = ();
+    type PostInherents = ();
+    type PostTransactions = ();
 }
 
 parameter_types! {
@@ -189,6 +200,7 @@ impl pallet_balances::Config for Runtime {
     type FreezeIdentifier = ();
     type MaxFreezes = ();
     type RuntimeFreezeReason = ();
+    type DoneSlashHandler = ();
 }
 
 parameter_types! {
@@ -202,7 +214,8 @@ impl pallet_transaction_payment::Config for Runtime {
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type WeightToFee = ConstantMultiplier<Balance, ConstU128<{ 100 * MICROUNIT }>>;
     type LengthToFee = ConstantMultiplier<Balance, ConstU128<{ MICROUNIT }>>;
-    type FeeMultiplierUpdate = ConstFeeMultiplier<Multiplier>;
+    type FeeMultiplierUpdate = ();
+    type WeightInfo = pallet_transaction_payment::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -227,6 +240,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     type XcmpMessageHandler = XcmpQueue;
     type ReservedXcmpWeight = ReservedXcmpWeight;
     type CheckAssociatedRelayNumber = RelayNumberMonotonicallyIncreases;
+    type RelayParentOffset = sp_core::ConstU32<0>;
     type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
         Runtime,
         6000,
@@ -243,23 +257,64 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type ChannelInfo = ParachainSystem;
     type VersionWrapper = ();
-    type XcmpQueue = frame_support::traits::TransformOrigin<
-        cumulus_primitives_core::AggregateMessageOrigin,
-        RuntimeOrigin,
-        xcm_builder::AliasesIntoAccountId32<(), AccountId>,
-    >;
+    type XcmpQueue = ();
     type MaxInboundSuspended = sp_core::ConstU32<1000>;
+    type MaxActiveOutboundChannels = sp_core::ConstU32<128>;
+    type MaxPageSize = sp_core::ConstU32<{ 1 << 16 }>;
     type ControllerOrigin = EnsureRoot<AccountId>;
-    type ControllerOriginConverter = xcm_builder::AliasesIntoAccountId32<(), AccountId>;
+    type ControllerOriginConverter = ();
     type WeightInfo = ();
     type PriceForSiblingDelivery = polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery<
         cumulus_primitives_core::ParaId,
     >;
 }
 
+// Basic XCM configuration
+use xcm::latest::prelude::*;
+
+parameter_types! {
+    pub const Here: Location = Location::here();
+    pub UniversalLocation: InteriorLocation = [GlobalConsensus(NetworkId::Polkadot)].into();
+    pub const BaseXcmWeight: Weight = Weight::from_parts(1_000_000_000, 64 * 1024);
+}
+
+pub struct XcmConfig;
+impl xcm_executor::Config for XcmConfig {
+    type RuntimeCall = RuntimeCall;
+    type XcmSender = ();
+    type AssetTransactor = ();
+    type OriginConverter = ();
+    type IsReserve = ();
+    type IsTeleporter = ();
+    type UniversalLocation = UniversalLocation;
+    type Barrier = ();
+    type Weigher = xcm_builder::FixedWeightBounds<BaseXcmWeight, RuntimeCall, sp_core::ConstU32<100>>;
+    type Trader = ();
+    type ResponseHandler = ();
+    type AssetTrap = ();
+    type AssetClaims = ();
+    type SubscriptionService = ();
+    type PalletInstancesInfo = ();
+    type MaxAssetsIntoHolding = sp_core::ConstU32<64>;
+    type AssetLocker = ();
+    type AssetExchanger = ();
+    type FeeManager = ();
+    type MessageExporter = ();
+    type UniversalAliases = ();
+    type CallDispatcher = RuntimeCall;
+    type SafeCallFilter = ();
+    type Aliasers = ();
+    type TransactionalProcessor = ();
+    type HrmpNewChannelOpenRequestHandler = ();
+    type HrmpChannelAcceptedHandler = ();
+    type HrmpChannelClosingHandler = ();
+    type XcmRecorder = ();
+    type XcmEventEmitter = ();
+}
+
 impl cumulus_pallet_xcm::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type XcmExecutor = xcm_executor::XcmExecutor<()>;
+    type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
 }
 
 impl pallet_aura::Config for Runtime {

@@ -25,13 +25,14 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use sp_std::vec::Vec;
-    use pallet_job_registry::{JobStatus, Pallet as JobRegistry};
+    use pallet_job_registry::Pallet as JobRegistry;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
     /// Event types
     #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+    #[codec(dumb_trait_bound)]
     pub enum EventType {
         /// On-chain event (from this chain)
         OnChain,
@@ -43,8 +44,32 @@ pub mod pallet {
         Condition,
     }
 
+    impl EventType {
+        /// Convert from u8 representation
+        pub fn from_u8(value: u8) -> Result<Self, ()> {
+            match value {
+                0 => Ok(EventType::OnChain),
+                1 => Ok(EventType::CrossChain),
+                2 => Ok(EventType::Timer),
+                3 => Ok(EventType::Condition),
+                _ => Err(()),
+            }
+        }
+
+        /// Convert to u8 representation
+        pub fn to_u8(&self) -> u8 {
+            match self {
+                EventType::OnChain => 0,
+                EventType::CrossChain => 1,
+                EventType::Timer => 2,
+                EventType::Condition => 3,
+            }
+        }
+    }
+
     /// Trigger action types
     #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+    #[codec(dumb_trait_bound)]
     pub enum TriggerAction {
         /// Start a job
         StartJob(u64),
@@ -52,6 +77,18 @@ pub mod pallet {
         SendXcmMessage,
         /// Execute custom logic
         Custom,
+    }
+
+    impl TriggerAction {
+        /// Convert from u8 and optional job_id
+        pub fn from_u8(value: u8, job_id: Option<u64>) -> Result<Self, ()> {
+            match value {
+                0 => Ok(TriggerAction::StartJob(job_id.ok_or(())?)),
+                1 => Ok(TriggerAction::SendXcmMessage),
+                2 => Ok(TriggerAction::Custom),
+                _ => Err(()),
+            }
+        }
     }
 
     /// Event data structure
@@ -94,7 +131,7 @@ pub mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         
         /// Weight information for extrinsics in this pallet.
-        type WeightInfo: WeightInfo;
+        type WeightInfo: crate::weights::WeightInfo;
 
         /// Maximum number of events to store
         #[pallet::constant]
@@ -186,8 +223,8 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Event submitted [event_id, event_type]
-        EventSubmitted { event_id: u64, event_type: EventType },
+        /// Event submitted [event_id]
+        EventSubmitted { event_id: u64 },
         /// Trigger registered [trigger_id, event_id, owner]
         TriggerRegistered { trigger_id: u64, event_id: u64, owner: T::AccountId },
         /// Trigger activated [trigger_id, event_id]
@@ -222,6 +259,10 @@ pub mod pallet {
         ConditionNotMet,
         /// Max events reached
         MaxEventsReached,
+        /// Invalid event type
+        InvalidEventType,
+        /// Invalid trigger action
+        InvalidTriggerAction,
     }
 
     #[pallet::hooks]
@@ -252,18 +293,22 @@ pub mod pallet {
         ///
         /// # Parameters
         /// - `origin`: Event submitter
-        /// - `event_type`: Type of event
+        /// - `event_type_u8`: Type of event (0=OnChain, 1=CrossChain, 2=Timer, 3=Condition)
         /// - `payload`: Event payload data
         /// - `source_para_id`: Source parachain ID (for cross-chain events)
         #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::submit_event())]
         pub fn submit_event(
             origin: OriginFor<T>,
-            event_type: EventType,
+            event_type_u8: u8,
             payload: Vec<u8>,
             source_para_id: Option<u32>,
         ) -> DispatchResult {
             let _who = ensure_signed(origin)?;
+
+            // Convert u8 to EventType
+            let event_type = EventType::from_u8(event_type_u8)
+                .map_err(|_| Error::<T>::InvalidEventType)?;
 
             // Validate payload size
             let bounded_payload: BoundedVec<u8, ConstU32<512>> = payload
@@ -299,7 +344,7 @@ pub mod pallet {
                 }
             });
 
-            Self::deposit_event(Event::EventSubmitted { event_id, event_type });
+            Self::deposit_event(Event::EventSubmitted { event_id });
 
             if let Some(para_id) = source_para_id {
                 Self::deposit_event(Event::CrossChainEventReceived {
@@ -316,17 +361,23 @@ pub mod pallet {
         /// # Parameters
         /// - `origin`: Rule owner
         /// - `event_id`: Event to watch
-        /// - `action`: Action to take
+        /// - `action_u8`: Action to take (0=StartJob, 1=SendXcmMessage, 2=Custom)
+        /// - `action_param`: Optional parameter for action (e.g., job_id for StartJob)
         /// - `condition`: Optional condition
         #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::register_trigger())]
         pub fn register_trigger(
             origin: OriginFor<T>,
             event_id: u64,
-            action: TriggerAction,
+            action_u8: u8,
+            action_param: Option<u64>,
             condition: Option<Vec<u8>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+
+            // Convert u8 to TriggerAction
+            let action = TriggerAction::from_u8(action_u8, action_param)
+                .map_err(|_| Error::<T>::InvalidTriggerAction)?;
 
             // Validate condition size
             let bounded_condition = if let Some(cond) = condition {
@@ -471,12 +522,12 @@ pub mod pallet {
             // Execute action
             match &trigger.action {
                 TriggerAction::StartJob(job_id) => {
-                    // Update job status to InProgress
+                    // Update job status to InProgress (1 = InProgress)
                     if let Some(_job) = JobRegistry::<T>::jobs(job_id) {
                         let _ = JobRegistry::<T>::update_job_status(
                             frame_system::RawOrigin::Signed(trigger.owner.clone()).into(),
                             *job_id,
-                            JobStatus::InProgress,
+                            1,
                         );
 
                         Self::deposit_event(Event::JobTriggered {

@@ -30,12 +30,12 @@ sc-offchain = { workspace = true }
 sc-consensus = { workspace = true }
 sc-executor = { workspace = true }
 sc-network = { workspace = true }
-sc-network-sync = { version = "0.35.0" }
+sc-network-sync = { version = "0.34.0" }
 sc-rpc = { workspace = true }
 sc-service = { workspace = true }
-sc-sysinfo = { version = "29.0.0" }
+sc-sysinfo = { version = "*" }
 sc-telemetry = { workspace = true }
-sc-tracing = { version = "30.0.0" }
+sc-tracing = { version = "*" }
 sc-transaction-pool = { workspace = true }
 sc-transaction-pool-api = { workspace = true }
 sc-consensus-aura = { workspace = true }
