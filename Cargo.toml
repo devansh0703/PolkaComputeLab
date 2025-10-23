@@ -29,7 +29,7 @@ sp-block-builder = { version = "*", default-features = false }
 sp-consensus-aura = { version = "*", default-features = false }
 sp-core = { version = "*", default-features = false }
 sp-inherents = { version = "*", default-features = false }
-sp-io = { version = "*", default-features = false }
+sp-io = { version = "43.0.0", default-features = false }
 sp-offchain = { version = "*", default-features = false }
 sp-runtime = { version = "*", default-features = false }
 sp-session = { version = "*", default-features = false }
@@ -87,7 +87,7 @@ sc-cli = { version = "*" }
 sc-client-api = { version = "*" }
 sc-consensus = { version = "*" }
 sc-executor = { version = "*" }
-sc-network = { version = "*" }
+sc-network = { version = ">=0.52" }
 sc-offchain = { version = "*" }
 sc-rpc = { version = "*" }
 sc-service = { version = "*" }

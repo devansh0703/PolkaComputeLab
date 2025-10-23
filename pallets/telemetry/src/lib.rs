@@ -98,10 +98,7 @@ pub mod pallet {
     }
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_job_registry::Config + pallet_consensus_manager::Config {
-        /// The overarching event type.
-        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        
+    pub trait Config: frame_system::Config<RuntimeEvent: From<Event<Self>>> + pallet_job_registry::Config + pallet_consensus_manager::Config {
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
 

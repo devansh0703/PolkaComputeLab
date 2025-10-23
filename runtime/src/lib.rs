@@ -210,7 +210,7 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+    type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<Balances, ()>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type WeightToFee = ConstantMultiplier<Balance, ConstU128<{ 100 * MICROUNIT }>>;
     type LengthToFee = ConstantMultiplier<Balance, ConstU128<{ MICROUNIT }>>;
@@ -333,7 +333,6 @@ parameter_types! {
 }
 
 impl pallet_job_registry::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_job_registry::weights::SubstrateWeight<Runtime>;
     type MaxJobsPerAccount = MaxJobsPerAccount;
     type MaxDependencyDepth = MaxDependencyDepth;
@@ -344,7 +343,6 @@ parameter_types! {
 }
 
 impl pallet_job_verifier::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_job_verifier::weights::SubstrateWeight<Runtime>;
     type MaxProofSize = MaxProofSize;
 }
@@ -354,7 +352,6 @@ parameter_types! {
 }
 
 impl pallet_consensus_manager::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_consensus_manager::weights::SubstrateWeight<Runtime>;
     type MaxValidators = MaxValidators;
 }
@@ -365,7 +362,6 @@ parameter_types! {
 }
 
 impl pallet_event_hub::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_event_hub::weights::SubstrateWeight<Runtime>;
     type MaxEvents = MaxEvents;
     type MaxTriggersPerAccount = MaxTriggersPerAccount;
@@ -376,7 +372,6 @@ parameter_types! {
 }
 
 impl pallet_telemetry::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_telemetry::weights::SubstrateWeight<Runtime>;
     type MaxJobMetrics = MaxJobMetrics;
 }
